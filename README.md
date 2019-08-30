@@ -122,9 +122,16 @@ ova_network_mask: "x.x.x.x"
 ova_network_gateway: "x.x.x.x"
 ```
 
-Set the root password for this appliance, or leave commented out to use the default.
+Set the root username and password for this appliance.
 ```
+vro_root_username: "root"
 vro_root_password: "VMwar3!!"
+```
+
+The following credentials are used for BASIC auth to the vco API. Note that this API user must be a member of the vro_auth_adminGroup group.
+```
+vro_api_username: vro_api_user@sgroot.local
+vro_api_password: VMwar3!!
 ```
 
 Set the Ansible connection variables (use exactly as shown)
@@ -185,6 +192,8 @@ Auth provider is one of '**CAFE**' or '**VSPHERE**'.
 ```
 vro_auth_provider: VSPHERE
 vro_auth_hostname: host.example.com
+vro_auth_username: administrator@vsphere.local
+vro_auth_password: VMwar3!!
 vro_adminGroup: "vro-admins"
 vro_adminGroupDomain: "{{ dns_domain }}"
 vro_auth_default_tenant: "vsphere.local"
