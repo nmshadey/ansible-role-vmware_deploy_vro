@@ -13,5 +13,4 @@ galaxy_info:
     - vRealize Orchestrator
 
 dependencies:
-  - src: nmshadey.vmware_deploy_ova
-    name: vmware_deploy_ova
+  - role: nmshadey.vmware_deploy_ova
