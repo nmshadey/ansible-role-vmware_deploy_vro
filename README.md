@@ -114,6 +114,8 @@ vro_logging_scriptingLevel: "INFO"
 
 ### The following parameters need to be defined in host_vars:
 
+#### Network Configuration
+
 Set Network Configuration for the appliance.
 ```
 ova_network_label: "VM Network"
@@ -121,6 +123,8 @@ ova_network_ip_address: "x.x.x.x"
 ova_network_mask: "x.x.x.x"
 ova_network_gateway: "x.x.x.x"
 ```
+
+#### Credentials and Access
 
 Set the root username and password for this appliance.
 ```
@@ -143,6 +147,8 @@ ansible_host: "{{ ova_network_ip_address }}"
 
 ### The following mandatory parameters need to be defined, as extra vars, or in group_vars or host_vars:
 
+#### OVA Deployment Variables
+
 Set the OVA deployment variables.
 ```
 ova_deployment_hostname: "vcenter/esxi hostname"
@@ -162,6 +168,8 @@ ova_deployment_cluster: "vcenter cluster"
 ova_deployment_folder: "vcenter folder"
 ```
 
+#### DNS Configuration
+
 Set the DNS domain that should be used.
 ```
 dns_domain: "example.com"
@@ -174,6 +182,8 @@ dns_servers:
   - "x.x.x.x"
 ```
 
+#### OVA Configuration
+
 Set the OVA file name.
 ```
 ova_file: "ova_file.ova"
@@ -184,7 +194,7 @@ Set the local path to the OVA file (do not use a leading /).
 ova_path: "/path/to/ova_file"
 ```
 
-#### Configure Authentication
+#### Configure Authentication Provider
 
 Set the auth provider to use for vRO authentication.
 
@@ -201,15 +211,21 @@ vro_auth_default_tenant: "vsphere.local"
 
 ### The following optional parameters can be defined, as extra vars, or in group_vars or host_vars:
 
+#### OVA Download Configuration
+
 Set the URL to the OVA file if source is set to '**http**' (do not use a leading /).
 ```
 ova_url: "http[s]://example.com/ovas"
 ```
 
+#### Load Balancer VIP
+
 Set VIP hostname if using a load balancer. This will default to using the inventory hostname.
 ```
 vro_vip_hostname: "vro.example.com"
 ```
+
+#### System Logging
 
 Provide the VMware LogInsight server details to send system logs to.
 
@@ -221,12 +237,16 @@ loginsight_server:
   protocol: syslog
 ```
 
+#### Install Plugins
+
 Provide a list of plugins that should be installed. The plugin packages should be placed in the '**files/plugins**' folder for the '**vmware_deploy_vro**' role.
 ```
 vro_plugins:
   - plugin1.dar
   - plugin2.vmoapp
 ```
+
+#### Install Packages
 
 Provide a list of packages that should be installed. The packages should be placed in the '**files/packages**' folder for the '**vmware_deploy_vro**' role.
 ```
@@ -318,7 +338,7 @@ Example Playbook
     - hosts: vro_appliances
       become: no
       roles:
-        - vmware_deploy_vro
+        - nmshadey.vmware_deploy_vro
     ```
 
 License
