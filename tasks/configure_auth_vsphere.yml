@@ -19,6 +19,7 @@
         configureLicences: true
         adminGroup: "{{ vro_auth_adminGroup }}"
         adminGroupDomain: "{{ vro_auth_adminGroupDomain }}"
+        defaultTenant: "{{ vro_auth_default_tenant }}"
         provider: VSPHERE
     status_code: [200]
     timeout: 120
