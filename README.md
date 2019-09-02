@@ -204,8 +204,8 @@ vro_auth_provider: VSPHERE
 vro_auth_hostname: host.example.com
 vro_auth_username: administrator@vsphere.local
 vro_auth_password: VMwar3!!
-vro_adminGroup: "vro-admins"
-vro_adminGroupDomain: "{{ dns_domain }}"
+vro_auth_adminGroup: "vro-admins"
+vro_auth_adminGroupDomain: "{{ dns_domain }}"
 vro_auth_default_tenant: "vsphere.local"
 ```
 
