@@ -1,7 +1,7 @@
 ---
 - name: Stop vRO Service
   uri:
-    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/server/status/stop"
+    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/server/status/stop"
     user: "{{ vro_root_username }}"
     password: "{{ vro_root_password }}"
     validate_certs: "{{ http_validate_certs }}"

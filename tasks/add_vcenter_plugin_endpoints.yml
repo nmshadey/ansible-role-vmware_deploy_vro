@@ -1,5 +1,6 @@
 ---
-- include_tasks: execute_workflow.yml
+- name: "Execute workflow: Add a vCenter Server Instance"
+  include_tasks: execute_workflow.yml
   vars:
     workflow_name: "Add a vCenter Server Instance"
 

@@ -4,7 +4,7 @@
     curl -k -XPOST -u "{{ vro_root_username }}":"{{ vro_root_password }}"
     -H "Content-Type: multipart/form-data; charset=utf-8; boundary=__X_PAW_BOUNDARY__"
     -F "file=@{{ role_path }}/files/plugins/{{ vro_plugin }}"
-    https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation
+    https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation
   args:
     warn: false # noqa 301
   delegate_to: localhost
@@ -17,7 +17,7 @@
 
 - name: "Install vRO Plugin: {{ vro_plugin }}"
   uri:
-    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}"
+    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}"
     user: "{{ vro_root_username }}"
     password: "{{ vro_root_password }}"
     validate_certs: "{{ http_validate_certs }}"
@@ -36,7 +36,7 @@
 
 - name: "Complete vRO Plugin Installation"
   uri:
-    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}/finish"
+    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}/finish"
     user: "{{ vro_root_username }}"
     password: "{{ vro_root_password }}"
     validate_certs: "{{ http_validate_certs }}"

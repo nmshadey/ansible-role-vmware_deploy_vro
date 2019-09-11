@@ -22,15 +22,15 @@ vro_enable_ssh: "True"
 ## Enable Customer Experience Improvement Program.
 vro_enable_telemetry: "False"
 
-## Set to 'yes' to default to using self-signed certificates otherwise
-## provide the certificate file in PEM format using the host name, as
+## Set to 'no' to default to using self-signed certificates otherwise set to 'yes'
+## and provide the certificate file in PEM format using the host name, as
 ## it has been defined in the hosts file (fqdn), with the extension .pem.
-vro_use_selfsigned_certificate: no
+vro_use_signed_certificate: no
 
 ### Set to enable or disable if packages should be installed.
 ## This will have a dependency on an authentication provider being configured
 ## and the API user a member of the adminGroup.
-vro_install_packages: yes
+vro_install_packages: no
 
 ## If a package version is already installed, set to 'yes' to force the package to be installed.
 vro_force_install_packages: no
@@ -43,14 +43,14 @@ vro_package_source: "local"
 ## Set to enable or disable if plugin endpoints should be configured.
 ## This will have a dependency on an authentication provider being configured
 ## and the API user a member of the adminGroup.
-vro_configure_plugin_endpoints: yes
+vro_configure_plugin_endpoints: no
 
 ## If a plugin is already installed, set to 'yes' to force the plugin to be installed.
 vro_force_plugin_install: no
 
 ## Set if you would like to ignore any errors when adding plugin endpoints.
 ## This can be useful if re-running the playbook fails due to duplicate endpoints.
-vro_ignore_plugin_errors: no
+vro_ignore_plugin_endpoint_errors: no
 
 ## Default log rotation parameters.
 ## Valid log levels are: '', 'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'OFF'.
