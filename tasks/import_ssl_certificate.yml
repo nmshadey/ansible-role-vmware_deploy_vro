@@ -1,19 +1,60 @@
 ---
-- name: Check that host certificate file exists
+- name: Check that host certificate file exists.
   stat:
     path: "{{ role_path }}/files/certs/{{ inventory_hostname | lower }}.pem"
     get_checksum: no
   delegate_to: localhost
   register: check_cert_exists
 
-- name: Fail if no host certificate file was found
-  fail:
-    msg: "{{ role_path }}/files/certs/{{ inventory_hostname | lower }}.pem not found"
-  when: not (check_cert_exists.stat.exists|bool)
+- name: Creates directory to store certificate files
+  file:
+    path: /certificates
+    state: directory
+
+- name: Copy certificate file
+  copy:
+    src: "{{ role_path }}/files/certs/{{ inventory_hostname | lower }}.pem"
+    dest: "/certificates/server.pem"
+
+- name: Get current VAMI certificate thumbprint
+  shell: "openssl x509 -in /opt/vmware/etc/lighttpd/server.pem -noout -sha1 -fingerprint"
+  register: current_cert_thumbprint
+  changed_when: false
+
+- name: Set Current VAMI certificate thumbprint
+  set_fact:
+    current_vami_thumbprint: "{{ current_cert_thumbprint.stdout | regex_search(query) }}"
+  vars:
+    query: '(?<=SHA1\sFingerprint=)([0-9A-F]{2}:){19}[0-9A-F]{2}'
+
+- name: Get new certificate thumbprint
+  shell: "openssl x509 -in /certificates/server.pem -noout -sha1 -fingerprint"
+  register: new_cert_thumbprint
+  changed_when: false
+
+- name: Set New thumbprint
+  set_fact:
+    new_thumbprint: "{{ new_cert_thumbprint.stdout | regex_search(query) }}"
+  vars:
+    query: '(?<=SHA1\sFingerprint=)([0-9A-F]{2}:){19}[0-9A-F]{2}'
+
+- name: Update VAMI Certificate
+  block:
+  - name: Copy certificate
+    copy:
+      remote_src: yes
+      src: "/certificates/server.pem"
+      dest: "/opt/vmware/etc/lighttpd/server.pem"
+
+  - name: Restart VAMI HTTP Service
+    service:
+      name: vami-lighttp  # noqa 503
+      state: restarted
+  when: current_vami_thumbprint != new_thumbprint
 
 - name: Get SSL Certificate Info
   uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/info"
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/info"
     user: "{{ vro_root_username }}"
     password: "{{ vro_root_password }}"
     validate_certs: "{{ http_validate_certs }}"
@@ -26,59 +67,63 @@
   delegate_to: localhost
   delegate_facts: true
 
-- name: Install SSL Certificate
-  command: >
-    curl -k -XPOST -u "{{ vro_root_username }}":"{{ vro_root_password }}"
-    -H "Content-Type: multipart/form-data; charset=utf-8; boundary=__X_PAW_BOUNDARY__"
-    -F "file=@{{ role_path }}/files/certs/{{ inventory_hostname | lower }}.pem"
-    https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/import/pem?pemPassword=password
-  args:
-    warn: false
-  delegate_to: localhost
-  register: vro_ssl_import_response
-  no_log: true
-  when: |
-    vro_ssl_info.json.sslCertificate.organization == "VMware" and
-    check_cert_exists.stat.exists|bool
+- name: debug
+  debug:
+    var: vro_ssl_info.json.sslCertificate.fingerprintSHA1|upper
 
-- name: Set Certificate ID
+- name: Set Current vRO certificate thumbprint
   set_fact:
-    vro_certificate_id: "{{ (vro_ssl_import_response.stdout | from_json).id }}" # noqa 503
-  when: vro_ssl_import_response.changed|bool
+    current_vro_thumbprint: "{{ vro_ssl_info.json.sslCertificate.fingerprintSHA1 | upper }}"
 
-- name: Complete SSL Certificate Import
-  uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/import/pem/{{ vro_certificate_id }}/finish" # noqa 503
-    user: "{{ vro_root_username }}"
-    password: "{{ vro_root_password }}"
-    validate_certs: "{{ http_validate_certs }}"
-    force_basic_auth: yes
-    method: POST
-    headers:
-      Accept: "{{ http_Accept }}"
-    status_code: [200]
-  register: vro_ssl_import_finish_response
-  delegate_to: localhost
-  delegate_facts: true
-  when: vro_ssl_import_response.changed|bool
-  changed_when: vro_ssl_import_finish_response.status == 200
+- name: Install vRO Certificate
+  block:
+  - name: Install SSL Certificate
+    command: >
+      curl -k -XPOST -u "{{ vro_root_username }}":"{{ vro_root_password }}"
+      -F "file=@{{ role_path }}/files/certs/{{ inventory_hostname | lower }}.pem"
+      https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/import/pem?pemPassword=password
+    args:
+      warn: false
+    delegate_to: localhost
+    register: vro_ssl_import_response
+    no_log: true
 
-- name: Restart Service
-  uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/server/status/restart" # noqa 503
-    user: "{{ vro_root_username }}"
-    password: "{{ vro_root_password }}"
-    validate_certs: "{{ http_validate_certs }}"
-    force_basic_auth: yes
-    method: POST
-    headers:
-      Accept: "{{ http_Accept }}"
-    status_code: [201]
-  register: vro_cc_restarted_response
-  delegate_to: localhost
-  delegate_facts: true
-  when: vro_ssl_import_response.changed|bool
-  changed_when: vro_cc_restarted_response.status == 201
+  - name: Set Certificate ID
+    set_fact:
+      vro_certificate_id: "{{ (vro_ssl_import_response.stdout | from_json).id }}" # noqa 503
 
-- include_tasks: wait_for_vro_service.yml
-  when: vro_cc_restarted_response.changed|bool
+  - name: Complete SSL Certificate Import
+    uri:
+      url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/import/pem/{{ vro_certificate_id }}/finish" # noqa 503
+      user: "{{ vro_root_username }}"
+      password: "{{ vro_root_password }}"
+      validate_certs: "{{ http_validate_certs }}"
+      force_basic_auth: yes
+      method: POST
+      headers:
+        Accept: "{{ http_Accept }}"
+      status_code: [200]
+    register: vro_ssl_import_finish_response
+    delegate_to: localhost
+    delegate_facts: true
+    changed_when: vro_ssl_import_finish_response.status == 200
+
+  - name: Restart Service
+    uri:
+      url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/server/status/restart" # noqa 503
+      user: "{{ vro_root_username }}"
+      password: "{{ vro_root_password }}"
+      validate_certs: "{{ http_validate_certs }}"
+      force_basic_auth: yes
+      method: POST
+      headers:
+        Accept: "{{ http_Accept }}"
+      status_code: [201]
+    register: vro_cc_restarted_response
+    delegate_to: localhost
+    delegate_facts: true
+    changed_when: vro_cc_restarted_response.status == 201
+
+  - include_tasks: wait_for_vro_service.yml
+    when: vro_cc_restarted_response.changed|bool
+  when: current_vro_thumbprint != new_thumbprint
