@@ -6,7 +6,7 @@ Deploys the vRealize Orchestrator Appliance from OVA and allows for the followin
 - SSL Certificate
 - Authentication Provider (vSphere or vRealize Automation)
 - Log Rotation Settings and Log Integration (LogInsight)
-- NTP
+- NTP Configuration
 - Install Plugins
 - Import Packages
 - Add Plugin Endpoints (SOAP, REST, vRA, vCenter, PowerShell, vAPI)
@@ -26,102 +26,16 @@ Requirements
 Role Variables
 --------------
 
-### Default variables that have been defined in defaults/main.yml
-
-These variables can be overridden using extra vars or by copying the variable to a host_vars or group_vars file and changing to the desired value.
-
-Default list of NTP Servers that will be used.
-```
-ntp_servers:
-  - "0.pool.ntp.org"
-  - "1.pool.ntp.org"
-  - "2.pool.ntp.org"
-  - "3.pool.ntp.org"
-```
-
-HTTP REST API Variables.
-```
-http_content_type: "application/json"
-http_Accept: "application/json"
-http_validate_certs: no
-http_body_format: "json"
-```
-
-Set the ports used by the vco and vco-controlcenter APIs.
-```
-vro_api_port: 8281
-vro_cc_api_port: 8283
-```
-
-Enable SSH access to the appliance.
-```
-vro_enable_ssh: "True"
-```
-
-Enable Customer Experience Improvement Program.
-```
-vro_enable_telemetry: "False"
-```
-
-Set to '**yes**' to default to using self-signed certificates otherwise provide the certificate file in PEM format using the host name, as it has been defined in the hosts file (fqdn), with the extension .pem.
-```
-vro_use_selfsigned_certificate: no
-```
-
-Set to enable or disable if packages should be installed. This will have a dependency on an authentication provider being configured and the API user a member of the adminGroup.
-```
-vro_install_packages: yes
-```
-
-If a package version is already installed, set to '**yes**' to force the package to be installed.
-```
-vro_force_install_packages: no
-```
-
-Set the source location of where packages can be found.
-
-Available options are '**local**'.
-
-If **local** is set, then packages should be placed in the '**files/packages**' folder in the '**vmware_deploy_vro**' role.
-```
-vro_package_source: "local"
-```
-
-Set to enable or disable if plugin endpoints should be configured. This will have a dependency on an authentication provider being configuredand the API user a member of the adminGroup.
-```
-vro_configure_plugin_endpoints: yes
-```
-
-If a plugin is already installed, set to '**yes**' to force the plugin to be installed.
-```
-vro_force_plugin_install: no
-```
-
-Set if you would like to ignore any errors when adding plugin endpoints. This can be useful if re-running the playbook fails due to duplicate endpoints.
-```
-vro_ignore_plugin_errors: no
-```
-
-Default log rotation parameters.
-
-Valid log levels are: '', '**ALL**', '**TRACE**', '**DEBUG**', '**INFO**', '**WARN**', '**ERROR**', '**FATAL**', '**OFF**'
-```
-vro_logging_globalLevel: "INFO"
-vro_logging_maxFileCount: 10
-vro_logging_maxFileSizeMb: 5
-vro_logging_scriptingLevel: "INFO"
-```
-
 ### The following parameters need to be defined in host_vars:
 
 #### Network Configuration
 
 Set Network Configuration for the appliance.
 ```
-ova_network_label: "VM Network"
-ova_network_ip_address: "x.x.x.x"
-ova_network_mask: "x.x.x.x"
-ova_network_gateway: "x.x.x.x"
+network_label: "VM Network"
+network_ip_address: "x.x.x.x"
+network_mask: "x.x.x.x"
+network_gateway: "x.x.x.x"
 ```
 
 #### Credentials and Access
@@ -213,9 +127,9 @@ vro_auth_default_tenant: "vsphere.local"
 
 #### OVA Download Configuration
 
-Set the URL to the OVA file if source is set to '**http**' (do not use a leading /).
+Set the URL to the OVA file if '**ova_source**' is set to '**http**' (do not use a leading /). The '**ova_source**' variable defaults to '**local**' in the **vmware_deploy_ova** role and can be overridden.
 ```
-ova_url: "http[s]://example.com/ovas"
+ova_url: "http[s]://example.com/ova"
 ```
 
 #### Load Balancer VIP
@@ -225,11 +139,21 @@ Set VIP hostname if using a load balancer. This will default to using the invent
 vro_vip_hostname: "vro.example.com"
 ```
 
+#### Import CA Signed Certificates
+
+Set '**vro_use_signed_certificate**' to '**yes**' if you would like to import CA signed certificates. The default setting is '**no**'.
+```
+vro_use_signed_certificate: no
+```
+
+If '**vro_use_signed_certificate**' is set to '**yes**', provide the certificate file in PEM format using the host name, as it has been defined in the hosts file (fqdn), with the extension .pem. The host certificate file should be placed in the '**files/certs**' directory.
+
+
 #### System Logging
 
 Provide the VMware LogInsight server details to send system logs to.
 
-Valid protocol options are '**syslog**' and '**cfapi**'.
+Valid protocol options are '**syslog**' and '**cfapi**'. Note that the '**cfapi**' protocol would typically use port 9000.
 ```
 loginsight_server:
   host: "loginsight.example.com"
@@ -237,25 +161,57 @@ loginsight_server:
   protocol: syslog
 ```
 
+Set log rotation parameters. The values displayed are the default.
+
+Valid log levels are: '', '**ALL**', '**TRACE**', '**DEBUG**', '**INFO**', '**WARN**', '**ERROR**', '**FATAL**', '**OFF**'
+```
+vro_logging_globalLevel: "INFO"
+vro_logging_maxFileCount: 10
+vro_logging_maxFileSizeMb: 5
+vro_logging_scriptingLevel: "INFO"
+```
+
 #### Install Plugins
 
-Provide a list of plugins that should be installed. The plugin packages should be placed in the '**files/plugins**' folder for the '**vmware_deploy_vro**' role.
+Provide a list of plugins that should be installed. The plugin packages should be placed in the '**files/plugins**' folder.
 ```
 vro_plugins:
   - plugin1.dar
   - plugin2.vmoapp
 ```
 
+If a plugin is already installed, set the following variable to '**yes**' to force the plugin to be installed. The default value for this variable is '**no**'.
+```
+vro_force_plugin_install: no
+```
+
 #### Install Packages
 
-Provide a list of packages that should be installed. The packages should be placed in the '**files/packages**' folder for the '**vmware_deploy_vro**' role.
+Set the following variable to '**yes**' to allow vRO packages to be imported. The default value for this variable is '**no**'.
+```
+vro_install_packages: no
+```
+
+If '**vro_install_packages**' is set to '**yes**' then provide a list of packages that should be installed. The packages should be placed in the '**files/packages**' folder for the '**vmware_deploy_vro**' role.
 ```
 vro_packages:
  - package1.package
  - package2.package
  ```
 
+If a package version is already installed, set the following variable to '**yes**' to force the package to be installed. The default value for this variable is '**no**'.
+```
+vro_force_install_packages: no
+```
+
 #### Configure Plugin Endpoints
+
+Set the following variable to '**yes**' to allow plugin endpoints to be added/configured. The default value for this variable is '**no**'. This will have a dependency on an authentication provider being configured and the API user a member of the specified adminGroup.
+```
+vro_configure_plugin_endpoints: no
+```
+
+If '**vro_configure_plugin_endpoints**' is set to '**yes** then provide a required plugin endpoint variables.
 
 Add vCenter Server Endpoints. If you also want to add the vAPI endpoint, ensure this service has been started.
 ```
@@ -326,17 +282,59 @@ soap_plugin_endpoints:
     # proxy_port: 8080
 ```
 
+Set the following variable to '**yes**' if you would like to ignore any errors when adding plugin endpoints. This can be useful if re-running the playbook fails due to duplicate endpoints. The default value for this variable is '**no**'.
+```
+vro_ignore_plugin_endpoint_errors: no
+```
+
+### Additional default variables
+
+The following additional default variables have also been set and can be overridden by setting them in a group_var.
+
+#### Default list of NTP Servers that will be used.
+```
+ntp_servers:
+  - "0.pool.ntp.org"
+  - "1.pool.ntp.org"
+  - "2.pool.ntp.org"
+  - "3.pool.ntp.org"
+```
+
+#### HTTP REST API Variables
+```
+http_content_type: "application/json"
+http_accept: "application/json"
+http_validate_certs: no
+http_body_format: "json"
+```
+
+Set the ports used by the vco and vco-controlcenter APIs.
+```
+vro_api_port: 8281
+vro_cc_api_port: 8283
+```
+
+Enable SSH access to the appliance.
+```
+vro_enable_ssh: "True"
+```
+
+Enable Customer Experience Improvement Program.
+```
+vro_enable_telemetry: "False"
+```
+
 Dependencies
 ------------
   ```
-  - src: nmshadey.vmware_deploy_ova
-    name: vmware_deploy_ova
+  - { role: vmware_deploy_ova, tags: [ 'deploy' ] }
   ```
 Example Playbook
 ----------------
     ```
     - hosts: vro_appliances
       become: no
+      gather_facts: False
       roles:
         - nmshadey.vmware_deploy_vro
     ```
@@ -349,4 +347,4 @@ MIT
 Author Information
 ------------------
 
-Gavin Stephens (www.simplygeek.co.uk)
+Gavin Stephens (https://www.simplygeek.co.uk)
