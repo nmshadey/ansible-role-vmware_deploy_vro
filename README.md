@@ -56,7 +56,7 @@ Set the Ansible connection variables (use exactly as shown)
 ```
 ansible_user: "{{ vro_root_username }}"
 ansible_password: "{{ vro_root_password }}"
-ansible_host: "{{ ova_network_ip_address }}"
+ansible_host: "{{ network_ip_address }}"
 ```
 
 ### The following mandatory parameters need to be defined, as extra vars, or in group_vars or host_vars:
