@@ -146,8 +146,7 @@ Set '**vro_use_signed_certificate**' to '**yes**' if you would like to import CA
 vro_use_signed_certificate: no
 ```
 
-If '**vro_use_signed_certificate**' is set to '**yes**', provide the certificate file in PEM format using the host name, as it has been defined in the hosts file (fqdn), with the extension .pem. The host certificate file should be placed in the '**files/certs**' directory.
-
+If '**vro_use_signed_certificate**' is set to '**yes**', provide the certificate file in PEM format using the host name, as it has been defined in the hosts file (fqdn), with the extension .pem. The host certificate file should be placed in the '**files/certs**' directory. The PEM file must include the host certificate and CA chain.
 
 #### System Logging
 
