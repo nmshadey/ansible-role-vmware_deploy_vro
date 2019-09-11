@@ -17,7 +17,7 @@
     dest: "/certificates/server.pem"
 
 - name: Get current VAMI certificate thumbprint
-  shell: "openssl x509 -in /opt/vmware/etc/lighttpd/server.pem -noout -sha1 -fingerprint"
+  shell: "openssl x509 -in /opt/vmware/etc/lighttpd/server.pem -noout -sha1 -fingerprint" # noqa 305
   register: current_cert_thumbprint
   changed_when: false
 
@@ -28,7 +28,7 @@
     query: '(?<=SHA1\sFingerprint=)([0-9A-F]{2}:){19}[0-9A-F]{2}'
 
 - name: Get new certificate thumbprint
-  shell: "openssl x509 -in /certificates/server.pem -noout -sha1 -fingerprint"
+  shell: "openssl x509 -in /certificates/server.pem -noout -sha1 -fingerprint" # noqa 305
   register: new_cert_thumbprint
   changed_when: false
 
