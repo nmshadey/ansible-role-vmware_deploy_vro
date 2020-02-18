@@ -1,0 +1,6 @@
+---
+- name: Disable TLS 1.0/1.1 and Enable TLS2
+  replace:
+    path: /etc/vco/app-server/server.xml
+    regexp: 'sslEnabledProtocols=\"[\w.,\s]+\"'
+    replace: 'sslEnabledProtocols="SSLv2Hello, TLSv1.2"'
