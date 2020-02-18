@@ -1,5 +1,34 @@
 ---
-- name: "Execute workflow: Add a SOAP host"
-  include_tasks: execute_workflow.yml
+- include_tasks: get_vro_inventory.yml
+  vars:
+    plugin_type: "SOAP"
+
+# - name: Check if SOAP host exists
+#   set_fact:
+#     existing_soap_name: "{{ vro_inventory.json.relations | json_query(query) }}"
+#   vars:
+#     query: "link[1].attributes[?name=='name' && value=='{{ soap_plugin.name }}'].value"
+
+- name: Get all SOAP hosts
+  set_fact:
+    existing_soap_names: "{{ vro_inventory.json.relations | json_query(query) }}"
+  vars:
+    query: "link[*].attributes[*][]"
+
+- name: Check if SOAP host exists
+  set_fact:
+    existing_soap_name: "{{ existing_soap_names | json_query(query) }}"
+  vars:
+    query: "[?name == 'name' && value=='{{ soap_plugin.name }}'].value"
+
+- name: Trust the Certificate of the SOAP host
+  include_tasks: import_trusted_certificate.yml
+  vars:
+    trusted_cert_url: "{{ soap_plugin.wsdl_uri }}"
+
+- include_tasks: execute_workflow.yml
   vars:
     workflow_name: "Add a SOAP host"
+  when: |
+    existing_soap_name|length < 1 or
+    existing_soap_name[0] != soap_plugin.name
