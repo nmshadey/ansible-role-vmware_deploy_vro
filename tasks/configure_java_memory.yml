@@ -1,0 +1,12 @@
+---
+- name: Configure Java Memory Xmx Settings
+  replace:
+    path: /usr/lib/vco/app-server/bin/setenv.sh
+    regexp: '-Xmx\d+m'
+    replace: "-Xmx{{ vro_java_heap_mem }}m"
+
+- name: Configure Java Memory Xms Settings
+  replace:
+    path: /usr/lib/vco/app-server/bin/setenv.sh
+    regexp: '-Xms\d+m'
+    replace: "-Xms{{ vro_java_heap_mem }}m"
