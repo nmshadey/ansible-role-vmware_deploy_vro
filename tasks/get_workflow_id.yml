@@ -1,0 +1,28 @@
+---
+- name: "Get ID and itemHref for Workflow: {{ workflow_name }}"
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/content/workflows?conditions=name={{ workflow_name | urlencode }}&keys=id"
+    user: "{{ vro_temp_api_username }}"
+    password: "{{ vro_temp_api_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: workflow_response
+  delegate_to: localhost
+  delegate_facts: true
+
+- name: Set Workflow ID
+  set_fact:
+    workflow_id: "{{ workflow_response.json.link[0] | json_query(query) | first }}"
+  vars:
+    query: "attributes[?name=='id'].value"
+
+- name: Set Workflow itemHref
+  set_fact:
+    workflow_href: "{{ workflow_response.json.link[0] | json_query(query) | first }}"
+  vars:
+    query: "attributes[?name=='itemHref'].value"
