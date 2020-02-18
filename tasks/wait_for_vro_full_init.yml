@@ -1,0 +1,6 @@
+---
+- name: Wait for the vRO Service to Start
+  include_tasks: wait_for_vro_service.yml
+
+- name: Wait for the vRO API to Start
+  include_tasks: wait_for_vro_api.yml
