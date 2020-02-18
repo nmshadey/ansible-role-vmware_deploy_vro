@@ -1,0 +1,65 @@
+---
+- name: Check if disk is already mounted
+  shell: "df | grep {{ disk.device }} | grep {{ disk.mount_point }}"
+  register: mount_status
+  ignore_errors: yes
+  no_log: true
+
+- name: Prepare and Mount Device
+  block:
+    - name: Create File System
+      filesystem:
+        fstype: ext3
+        dev: "{{ disk.device }}"
+
+    - name: Create Directory
+      file:
+        path: "{{ disk.mount_point }}"
+        state: directory
+
+    - name: Migrate Data
+      block:
+        - name: Create Temp Directory
+          file:
+            path: "/mnt/{{ disk.mount_point }}"
+            state: directory
+
+        - name: Mount Temp Device
+          mount:
+            path: "/mnt/{{ disk.mount_point }}"
+            src: "{{ disk.device }}"
+            fstype: ext3
+            state: mounted
+
+        - name: "Copy data from {{ disk.mount_point }} to /mnt/{{ disk.mount_point }}"
+          shell: "cp -apx {{ disk.mount_point }}/* /mnt/{{ disk.mount_point }}"
+
+        - name: Unount Temp Device
+          mount:
+            path: /mnt/{{ disk.mount_point }}
+            src: "{{ disk.device }}"
+            fstype: ext3
+            state: absent
+
+        - name: Remove old Directory
+          file:
+            path: "/mnt/{{ disk.mount_point }}"
+            state: absent
+
+        - name: Re-create mount point
+          file:
+            path: "/mnt/{{ disk.mount_point }}"
+            state: directory
+
+        - name: Switch to runlevel 1 and back to 5
+          shell: "init 1;sleep 3;init 5"
+      when: disk.migrate_data is defined and disk.migrate_data|bool
+
+    - name: Mount Device
+      mount:
+        path: "{{ disk.mount_point }}"
+        src: "{{ disk.device }}"
+        fstype: ext3
+        passno: "{{ disk.passno | default(0) }}"
+        state: mounted
+  when: mount_status.rc == 1
