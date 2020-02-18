@@ -1,0 +1,13 @@
+[libdefaults]
+  default_realm = {{ ad_join_domain|upper }}
+
+[realms]
+{{ ad_join_domain|upper }} = {
+  kdc = {{ ad_join_domain|upper }}
+  default_domain = {{ ad_join_domain|upper }}
+}
+  
+[logging]
+  kdc = FILE:/var/log/krb5/krb5kdc.log
+  admin_server = FILE:/var/log/krb5/kadmind.log
+  default = SYSLOG:NOTICE:DAEMON
