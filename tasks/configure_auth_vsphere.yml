@@ -1,36 +1,12 @@
 ---
-- name: "Update Authentication Configuration for provider: {{ vro_auth_provider }}"
-  uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/{{ auth_provider_id }}"
-    user: "{{ vro_root_username }}"
-    password: "{{ vro_root_password }}"
-    validate_certs: "{{ http_validate_certs }}"
-    force_basic_auth: yes
-    method: POST
-    headers:
-      Accept: "{{ http_Accept }}"
-    body_format: "{{ http_body_format }}"
-    body:
-      VSPHERE:
-        url: "https://{{ vro_auth_hostname }}/lookupservice/sdk"
-        username: "{{ vro_auth_username }}"
-        password: "{{ vro_auth_password }}"
-        importCertificates: true
-        configureLicences: true
-        adminGroup: "{{ vro_auth_adminGroup }}"
-        adminGroupDomain: "{{ vro_auth_adminGroupDomain }}"
-        defaultTenant: "{{ vro_auth_default_tenant }}"
-        provider: VSPHERE
-    status_code: [200]
-    timeout: 120
-  register: auth_update_response
-  delegate_to: localhost
-  delegate_facts: true
-  changed_when: auth_update_response.status == 200
+- name: Trust the Certificate of the Authentication Provider
+  include_tasks: import_trusted_certificate.yml
+  vars:
+    trusted_cert_url: "{{ vro_vc_host }}"
 
-- name: "Validate Authentication Configuration for provider: {{ vro_auth_provider }}"
+- name: "Check existing configuration for provider: {{ vro_auth_provider }}"
   uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/validate"
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/validate"
     user: "{{ vro_root_username }}"
     password: "{{ vro_root_password }}"
     validate_certs: "{{ http_validate_certs }}"
@@ -38,41 +14,81 @@
     method: GET
     headers:
       Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
     status_code: [200]
-  register: auth_validate_response
+    timeout: 120
+  register: auth_check_response
   delegate_to: localhost
-  delegate_facts: true
 
-- name: "Complete Authentication Configuration Wizard for provider: {{ vro_auth_provider }}"
-  uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/{{ auth_provider_id }}/finish"
-    user: "{{ vro_root_username }}"
-    password: "{{ vro_root_password }}"
-    validate_certs: "{{ http_validate_certs }}"
-    force_basic_auth: yes
-    method: POST
-    headers:
-      Accept: "{{ http_Accept }}"
-    status_code: [200]
-  register: auth_finish_response
-  delegate_to: localhost
-  delegate_facts: true
-  changed_when: auth_finish_response.status == 200
-  when: auth_validate_response.json.status == "NOK"
+- name: "Configure Authentication Configuration for provider: {{ vro_auth_provider }}"
+  block:
+    - name: "Update Authentication Configuration for provider: {{ vro_auth_provider }}"
+      uri:
+        url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/{{ auth_provider_id }}"
+        user: "{{ vro_root_username }}"
+        password: "{{ vro_root_password }}"
+        validate_certs: "{{ http_validate_certs }}"
+        force_basic_auth: yes
+        method: POST
+        headers:
+          Accept: "{{ http_Accept }}"
+        http_agent: "{{ http_agent }}"
+        body_format: "{{ http_body_format }}"
+        body:
+          VSPHERE:
+            username: "{{ vcsa_sso_username }}"
+            password: "{{ vcsa_sso_password }}"
+            importCertificates: true
+            adminGroup: "{{ vro_auth_adminGroup }}"
+            adminGroupDomain: "{{ ad_domain }}"
+            url: "https://{{ vro_vc_host }}/lookupservice/sdk"
+            provider: VSPHERE
+        status_code: [200]
+        timeout: 120
+      register: auth_update_response
+      delegate_to: localhost
+      delegate_facts: true
+      changed_when: auth_update_response.status == 200
 
-- name: "Remove Authentication Configuration Wizard for provider: {{ vro_auth_provider }}"
-  uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/unregister/{{ auth_provider_id }}"
-    user: "{{ vro_root_username }}"
-    password: "{{ vro_root_password }}"
-    validate_certs: "{{ http_validate_certs }}"
-    force_basic_auth: yes
-    method: DELETE
-    headers:
-      Accept: "{{ http_Accept }}"
-    status_code: [200]
-  register: auth_remove_response
-  delegate_to: localhost
-  delegate_facts: true
-  changed_when: auth_remove_response == 200
-  when: auth_validate_response.status != 200
+    - name: "Complete Authentication Configuration Wizard for provider: {{ vro_auth_provider }}"
+      uri:
+        url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/{{ auth_provider_id }}/finish"
+        user: "{{ vro_root_username }}"
+        password: "{{ vro_root_password }}"
+        validate_certs: "{{ http_validate_certs }}"
+        force_basic_auth: yes
+        method: POST
+        headers:
+          Accept: "{{ http_Accept }}"
+        http_agent: "{{ http_agent }}"
+        status_code: [200]
+      register: auth_finish_response
+      delegate_to: localhost
+      delegate_facts: true
+      changed_when: auth_finish_response.status == 200
+
+    - name: "Validate Authentication Configuration for provider: {{ vro_auth_provider }}"
+      uri:
+        url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/authentication/configuration/validate"
+        user: "{{ vro_root_username }}"
+        password: "{{ vro_root_password }}"
+        validate_certs: "{{ http_validate_certs }}"
+        force_basic_auth: yes
+        method: GET
+        headers:
+          Accept: "{{ http_Accept }}"
+        http_agent: "{{ http_agent }}"
+        status_code: [200]
+      register: auth_validate_response
+      delegate_to: localhost
+      delegate_facts: true
+
+    - name: Fail if validation failed
+      fail:
+        msg: "{{ auth_validate_response.json.errorMessage }}"
+      when: |
+        auth_validate_response.json.errorMessage is defined and
+        auth_validate_response.json.errorMessage != ""
+  when: |
+    auth_check_response.json.errorMessage == "error.missing.url" or
+    vro_auth_update_admin_group|bool
