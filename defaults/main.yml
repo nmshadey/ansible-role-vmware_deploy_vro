@@ -58,3 +58,25 @@ vro_logging_globalLevel: "INFO"
 vro_logging_maxFileCount: 10
 vro_logging_maxFileSizeMb: 5
 vro_logging_scriptingLevel: "INFO"
+
+## Default Authentication Provider Variables.
+vro_auth_provider: "VSPHERE"
+vro_auth_default_tenant: "vsphere.local"
+
+## Default REST host variables.
+vro_rest_host_ignore_warnings: true
+vro_rest_host_connection_timeout: 60
+vro_rest_host_operation_timeout: 120
+vro_rest_host_verification: false
+vro_rest_host_auto_url_redirection: false
+
+## Default SOAP host variables.
+vro_soap_host_connection_timeout: 30
+vro_soap_host_request_timeout: 60
+
+## Default vRO restart condition. This will be set to 'true' when a
+## restart of the vRO service is required.
+vro_service_restart_required: false
+
+## Flag to set if the vRO authentication admin group needs to be updated.
+vro_auth_update_admin_group: false
