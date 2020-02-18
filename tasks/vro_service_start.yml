@@ -1,0 +1,9 @@
+---
+- name: Start vRO Service
+  include_tasks: vro_service_manager.yml
+  vars:
+    service_action: start
+
+## Wait for the vRO Service and API to fully initialize.
+- name: Wait for vRO Server to Fully Initialize
+  include_tasks: wait_for_vro_full_init.yml
