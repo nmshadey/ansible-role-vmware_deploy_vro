@@ -1,0 +1,14 @@
+---
+- name: Configure vCenter Plugin Timeout
+  lineinfile:
+    path: /etc/vco/app-server/vmo.properties
+    regexp: '^com.vmware.vmo.plugin.vi4.socketReadTimeout=\d+$'
+    line: "com.vmware.vmo.plugin.vi4.socketReadTimeout={{ vro_vcenter_plugin_timeout }}"
+    state: present
+
+- name: Allow local process execution
+  lineinfile:
+    path: /etc/vco/app-server/vmo.properties
+    regexp: '^com.vmware.js.allow-local-process=\d+$'
+    line: "com.vmware.js.allow-local-process=true"
+    state: present
