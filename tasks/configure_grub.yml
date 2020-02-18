@@ -1,0 +1,15 @@
+---
+- name: Generate GRUB Password Hash
+  shell: "echo -e '{{ vro_root_password }}\n{{ vro_root_password }}' | grub-md5-crypt 2>/dev/null | tail --lines=1"
+  args:
+    warn: false
+  register: grub_password
+  changed_when: false
+  no_log: true
+
+- name: Configure GRUB Password
+  lineinfile:
+    path: /boot/grub/menu.lst
+    regexp: '^password\s--md5\s.{32}$'
+    insertafter: '^timeout \d$'
+    line: "password --md5 {{ grub_password.stdout }}"
