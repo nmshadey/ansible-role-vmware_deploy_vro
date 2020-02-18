@@ -1,0 +1,19 @@
+---
+- name: Install SSH Private Key
+  blockinfile:
+    path: /etc/vco/app-server/iaas_vco_key
+    block: "{{ vro_file1 | b64decode }}"
+    owner: vco
+    group: vco
+    create: yes
+    state: present
+
+- name: Install SSH Public Key
+  lineinfile:
+    path: /etc/vco/app-server/iaas_vco_key.pub
+    line: "{{ vro_file2 | b64decode }}"
+    owner: vco
+    group: vco
+    create: yes
+    state: present
+    validate: ssh-keygen -l -f %s
