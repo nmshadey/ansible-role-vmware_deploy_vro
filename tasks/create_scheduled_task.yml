@@ -1,0 +1,49 @@
+---
+- include_tasks: get_workflow_id.yml
+  vars: 
+    workflow_name: "{{ scheduled_task.name }}"
+
+- name: Get Current Scheduled Tasks
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/tasks"
+    user: "{{ vro_temp_api_username }}"
+    password: "{{ vro_temp_api_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: tasks
+  delegate_to: localhost
+  run_once: yes
+
+- name: "Create Scheduled Task for Workflow: {{ scheduled_task.name }}"
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/tasks"
+    user: "{{ vro_temp_api_username }}"
+    password: "{{ vro_temp_api_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    body_format: "{{ http_body_format }}"
+    body:
+      name: "{{ scheduled_task.name }}"
+      description: "{{ scheduled_task.description }}"
+      workflow:
+        id: "{{ workflow_id }}"
+        href: "{{ workflow_href }}"
+      user: "{{ vro_temp_api_username }}"
+      recurrence-pattern: "{{ scheduled_task['recurrence-pattern'] }}"
+      recurrence-cycle: "{{ scheduled_task['recurrence-cycle'] }}"
+      recurrence-start-date: "{{ lookup('pipe','date +%FT%T%:z') }}"
+      start-mode: "normal"
+    status_code: [202]
+  register: task_created
+  delegate_to: localhost
+  changed_when: task_created.status == 202
+  when: ( tasks.json.relations | json_query("link[*].attributes[?name=='workflowName'].value") | length ) < 1
