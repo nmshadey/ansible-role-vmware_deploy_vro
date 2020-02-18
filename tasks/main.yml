@@ -42,3 +42,146 @@
   when: |
     vro_configure_plugin_endpoints|bool and
     vro_auth_provider is defined
+    
+ ## Wait for the API service to become available as this will signify
+# ## that the vRO appliance has completed the bootstrap process.
+# - name: Wait for the vRO Service to Start
+#   include_tasks: wait_for_vro_service.yml
+
+# - name: Configure SSH Known Hosts
+#   include_tasks: configure_ssh_host_key.yml
+
+# - name: Configure the GRUB Bootloader
+#   include_tasks: configure_grub.yml
+
+# - name: Configure Additional Virtual Disks
+#   include_tasks: configure_disks.yml
+#   loop: "{{ ova_hardware_disks }}"
+#   loop_control:
+#     loop_var: disk
+#   when: ova_hardware_disks is defined
+
+# ## Install the SSH Private and Public keys used by vRO workflows.
+# ## These are not the keys used for accessing the appliance shell over SSH.
+# - name: Install SSH key
+#   include_tasks: install_ssh_key.yml
+
+# ## Wait for the vRO Service and API to fully initialize.
+# - name: Wait for vRO Server to Fully Initialize
+#   include_tasks: wait_for_vro_full_init.yml
+
+# - name: Configure the Hostname of the Appliance
+#   include_tasks: configure_hostname.yml
+
+# ## Configuring the Authentication Provider will also set the temporary admin group
+# ## that is only used during the build process. This will only be set if no authentication provider
+# ## was previously configured.
+# - name: Configure temporary AD authentication with a known FID (lockdown at the end)
+#   include_tasks: configure_auth_provider.yml
+#   vars:
+#     vro_auth_adminGroup: "{{ vro_temp_adminGroup }}"
+
+# ## Assigning the license key as part of the authenticaion provider configuration has known
+# ## to cause issues. Therefore, the license key is configured using the provided API.
+# - name: Assign the vRO License Key
+#   include_tasks: assign_license.yml
+#   when: VRO_LicenseKey is defined
+
+# ## Request/renew and install SSL Certificates.
+# ## This is mandatory for SIT, UAT and PROD but not LAB.
+# - include_tasks: request_renew_ssl_certificate.yml
+#   when: active_environment in strict_environment
+
+# - name: Configure the NTP Service
+#   include_tasks: configure_ntp.yml
+
+# - name: Configure Java Settings
+#   include_tasks: configure_java_memory.yml
+
+# - name: Configure TLS Settings
+#   include_tasks: configure_tls_protocols.yml
+
+# - name: Configure Advanced vRO Settings
+#   include_tasks: configure_vro_advanced_settings.yml
+
+# ## Configure log settings when no external syslog provider has been defined.
+# - name: Configure vRO Log Settings
+#   include_tasks: configure_log_settings.yml
+#   when: loginsight_servers is not defined
+
+# ## Configure integration with an external syslog provider and also configure log settings.
+# - name: Configure vRO Log Integration Settings
+#   include_tasks: configure_log_integration.yml
+#   when: loginsight_servers is defined
+
+# - name: Configure Kerberos Settings
+#   include_tasks: configure_kerberos.yml
+
+# - name: Install vRO Plugins
+#   include_tasks: install_plugin.yml
+#   loop: "{{ vro_plugins }}"
+#   loop_control:
+#     loop_var: vro_plugin_file
+
+# ## A number of previous tasks could require that the vRO service is restarted. A flag is set
+# ## and the restart is handled here to avoid multiple unnecessary restarts.
+# - name: Restart the vRO Service
+#   include_tasks: vro_service_restart.yml
+#   when: vro_service_restart_required|bool
+
+# - name: Install vRO Packages
+#   include_tasks: install_packages.yml
+#   loop: "{{ vro_packages }}"
+#   loop_control:
+#     loop_var: vro_package
+#   when: vro_install_packages|bool
+
+# ## Plugin host endpoints are only added after plugins have been installed or updated.
+# - name: Add and Configure vRO Plugin Host Endpoints
+#   include_tasks: add_plugin_endpoints.yml
+
+# ## Configuration Elements must always be created after plugin host endpoints have been
+# ## added. These are references in configuration element attributes.
+# - name: Create vRO Configuration Elements
+#   include_tasks: create_config_elements.yml
+#   loop: "{{ vro_config_elements }}"
+#   loop_control:
+#     loop_var: config_element
+#   when: vro_config_elements is defined
+
+# - name: Create PowerShell Configuration Elements
+#   include_tasks: create_config_elements.yml
+#   loop: "{{ powershell_config_elements }}"
+#   loop_control:
+#     loop_var: powershell_config_elements
+#   when: vro_ps_host is defined
+
+# ## We create a main scheduler in vRO which will then manage all tasks:
+# - name: Create vRO Scheduled Workflow Tasks
+#   include_tasks: create_scheduled_task.yml
+#   loop: "{{ vro_scheduled_tasks }}"
+#   loop_control:
+#     loop_var: scheduled_task
+#   when: vro_scheduled_tasks is defined
+
+# - name: Create vRO Access Permissions
+#   include_tasks: create_permission.yml
+#   loop: "{{ vro_permissions }}"
+#   loop_control:
+#     loop_var: permission
+#   when: vro_permissions is defined
+
+# ## Turn off/on Linux services on the vRO appliance.
+# - name: Lockdown Services
+#   include_tasks: manage_services.yml
+
+# ## Performs tasks to validate that the vRO deployment is compliant.
+# - name: Validate Deployment
+#   include_tasks: validate_deployment.yml
+
+# # Sets the final (locked down) vRO Admin group, removing the temp group that was added during build.
+# - name: Set the Secure Authentication Admin Group
+#   include_tasks: configure_auth_provider.yml
+#   vars:
+#     vro_auth_adminGroup: "{{ vro_prod_adminGroup }}"
+#     vro_auth_update_admin_group: true
