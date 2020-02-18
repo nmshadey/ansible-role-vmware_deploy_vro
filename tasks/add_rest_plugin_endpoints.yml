@@ -1,5 +1,36 @@
 ---
-- name: "Execute workflow: Add a REST host"
-  include_tasks: execute_workflow.yml
+- include_tasks: get_vro_inventory.yml
+  vars:
+    plugin_type: "REST"
+
+# - name: Check if REST host exists
+#   set_fact:
+#     existing_rest_name: "{{ vro_inventory.json.relations | json_query(query) }}"
+#   vars:
+#     query: "link[1].attributes[?name=='name' && value=='{{ rest_plugin.name }}'].value"
+
+- name: Get all REST hosts
+  set_fact:
+    existing_rest_names: "{{ vro_inventory.json.relations | json_query(query) }}"
+  vars:
+    query: "link[*].attributes[*][]"
+
+- name: Check if REST host exists
+  set_fact:
+    existing_rest_name: "{{ existing_rest_names | json_query(query) }}"
+  vars:
+    query: "[?name == 'name' && value=='{{ rest_plugin.name }}'].value"
+
+- name: Trust the Certificate of the REST host nodes
+  include_tasks: import_trusted_certificate.yml
+  loop: "{{ rest_plugin.nodes }}"
+  loop_control:
+    loop_var: trusted_cert_url
+  when: rest_plugin.nodes is defined
+
+- include_tasks: execute_workflow.yml
   vars:
     workflow_name: "Add a REST host"
+  when: |
+    existing_rest_name|length < 1 or
+    existing_rest_name[0] != rest_plugin.name
