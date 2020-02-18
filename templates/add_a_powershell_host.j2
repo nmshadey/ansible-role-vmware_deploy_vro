@@ -16,7 +16,7 @@
       "scope": "local",
       "name": "port",
       "type": "string",
-      "value": {"string": {"value": "{{ powershell_plugin.port }}" }}
+      "value": {"string": {"value": "{{ powershell_plugin.port | default("") }}" }}
     },
     {
       "scope": "local",
@@ -28,7 +28,7 @@
       "scope": "local",
       "name": "transportProtocol",
       "type": "string",
-      "value": {"string": {"value": "HTTPS" }}
+      "value": {"string": {"value": "{{ "HTTPS" if powershell_plugin.useSSL is defined and powershell_plugin.useSSL else "HTTP" }}" }}
     },
     {
       "scope": "local",
