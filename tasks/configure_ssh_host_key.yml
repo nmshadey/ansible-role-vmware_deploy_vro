@@ -1,0 +1,47 @@
+---
+# - name: Remove old SSH host key from known_hosts (name)
+#   known_hosts:
+#     name: "{{ inventory_hostname|lower }}"
+#     state: absent
+#     hash_host: yes
+#   delegate_to: localhost
+
+# - name: Remove old SSH host key from known_hosts (IP)
+#   known_hosts:
+#     name: "{{ lookup('dig', inventory_hostname|lower + './A' )}}"
+#     state: absent
+#     hash_host: yes
+#   delegate_to: localhost
+
+# - name: Add SSH host key to known_hosts
+#   known_hosts:
+#     path: "~/.ssh/known_hosts"
+#     name: "{{ inventory_hostname|lower }}"
+#     hash_host: yes
+#     key: "{{ lookup('pipe', 'ssh-keyscan -t rsa -p 22 ' + inventory_hostname|lower ) }}"
+#   delegate_to: localhost
+
+  - name: Check if SSH host key exists in known_hosts
+    shell: "ssh-keygen -F {{ inventory_hostname|lower }}"
+    register: ssh_known_hosts
+    ignore_errors: True
+    changed_when: False
+    delegate_to: localhost
+
+  - name: Get the SSH host key from the host
+    shell: "ssh-keyscan -H -t rsa {{ inventory_hostname|lower }}"
+    register: ssh_host_key
+    changed_when: False
+    delegate_to: localhost
+
+  - name: Remove old SSH host key from known_hosts
+    shell: "ssh-keygen -R {{ inventory_hostname|lower }}"
+    delegate_to: localhost
+    when: not(ssh_host_key.stdout.split()[2] in ssh_known_hosts.stdout)
+
+  - name: Add SSH host key to known_hosts
+    shell: "ssh-keyscan -H -t rsa {{ inventory_hostname|lower }} >> ~/.ssh/known_hosts"
+    delegate_to: localhost
+    when: |
+      ssh_known_hosts.rc == 1 or
+      not(ssh_host_key.stdout.split()[2] in ssh_known_hosts.stdout)
