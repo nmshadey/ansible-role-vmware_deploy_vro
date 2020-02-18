@@ -1,0 +1,15 @@
+---
+- name: "Get vRO Inventory for Plugin Type: {{ plugin_type|upper }}"
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/inventory/{{ plugin_type|upper }}"
+    user: "{{ vro_temp_api_username }}"
+    password: "{{ vro_temp_api_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+        Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: vro_inventory
+  delegate_to: localhost
