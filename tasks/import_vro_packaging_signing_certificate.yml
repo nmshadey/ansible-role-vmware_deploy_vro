@@ -1,0 +1,47 @@
+---
+# This API path is only for importing vRO package signing certificate. Not used in JPMC at the moment
+
+- name: "Import certificate {{ certificate }}"
+  command: >
+    curl -k -X POST -u "{{ vro_root_username }}":"{{ vro_root_password }}"
+    -F "file=@{{ role_path }}/files/{{ certificate }}"
+    -A "{{ http_agent }}"
+    https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/certificates/import?password=%02%03
+  args:
+    warn: false
+  delegate_to: localhost
+  register: vro_cert_upload_response
+  no_log: false
+
+- name: "Import certificate {{ certificate }} failed"
+  fail:
+    msg: "{{ vro_cert_upload_response.stdout }}"
+  when: |
+    (vro_cert_upload_response.stdout | from_json).error is defined and
+    (vro_cert_upload_response.stdout | from_json).error != ""
+
+- name: Set Certificate ID
+  set_fact:
+    vro_cert_id: "{{ (vro_cert_upload_response.stdout | from_json).id }}"
+
+- name: "Complete certificate import {{ certificate }}"
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/certificates/import/{{ vro_cert_id }}/finish"
+    user: "{{ vro_root_username }}"
+    password: "{{ vro_root_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: vro_cert_finish_response
+  delegate_to: localhost
+
+- name: "Complete certificate import {{ certificate }} failed"
+  fail:
+    msg: "{{ vro_cert_finish_response.stdout }}"
+  when: |
+    (vro_cert_finish_response.stdout | from_json).error is defined and
+    (vro_cert_finish_response.stdout | from_json).error != ""
