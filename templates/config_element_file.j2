@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
+<config-element id="{{ config_element.id }}" version="1.0.0" >
+<display-name><![CDATA[{{ config_element.name }}]]></display-name>
+<atts>
+{% for attribute in config_element.attributes %}
+    {% if attribute.type == 'SecureString' %}
+        {%- set attribute_value = attribute.value | vro_encode_pass -%}
+    {% elif attribute.type == 'PowerShell:PowerShellHost' %}
+        {%- set attribute_value = "dunes://service.dunes.ch/CustomSDKObject?id='" ~ ps_host_id ~ "'&dunesName='PowerShell:PowerShellHost'" -%}
+    {% else %}
+        {%- set attribute_value = attribute.value -%}
+    {% endif %}
+    <att name='{{ attribute.name }}' type='{{ attribute.type }}' read-only='false' ><value encoded='n'><![CDATA[{{ attribute_value }}]]></value><description><![CDATA[{{ attribute.description }}]]></description></att>
+{% endfor %}
+</atts>
+</config-element>
