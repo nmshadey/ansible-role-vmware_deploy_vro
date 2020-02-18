@@ -1,52 +1,140 @@
 ---
-- name: "Upload vRO Plugin: {{ vro_plugin }}"
-  command: >
-    curl -k -XPOST -u "{{ vro_root_username }}":"{{ vro_root_password }}"
-    -F "file=@{{ role_path }}/files/plugins/{{ vro_plugin }}"
-    https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation
-  args:
-    warn: false # noqa 301
-  delegate_to: localhost
-  register: vro_plugin_upload_response
-  no_log: true
-
-- name: Set Plugin ID
+- name: Get Plugin Name
   set_fact:
-    vro_plugin_id: "{{ (vro_plugin_upload_response.stdout | from_json).id }}"
+    vro_plugin_name: "{{ vro_plugin_file.split('.')[:-1] | join('.') }}"
 
-- name: "Install vRO Plugin: {{ vro_plugin }}"
+- name: Create Directory to Extract Plugin
+  file:
+    path: "/tmp/{{ vro_plugin_name }}"
+    state: directory
+  delegate_to: localhost
+
+- name: Extract Plugin Package
+  unarchive:
+    src: "roles/vmware_deploy_vro_7.5/files/plugins/{{ vro_plugin_file }}"
+    dest: "/tmp/{{ vro_plugin_name }}"
+    list_files: true
+  register: plugin_package_extracted
+  delegate_to: localhost
+
+- name: Get Plugin DAR File Name
+  set_fact:
+    plugin_dar_file_name: "{{ plugin_package_extracted.files | select('match','.*.dar') | list | first }}"
+
+- name: Extract DAR File
+  unarchive:
+    src: "/tmp/{{ vro_plugin_name }}/{{ plugin_dar_file_name }}"
+    dest: "/tmp/{{ vro_plugin_name }}"
+  register: plugin_dar_extracted
+  delegate_to: localhost
+
+- name: Get Plugin Metadata
+  xml:
+    path: "/tmp/{{ vro_plugin_name }}/VSO-INF/vso.xml"
+    xpath: /module
+    content: attribute
+  register: plugin_meta
+  delegate_to: localhost
+
+- name: Get Plugin Name
+  set_fact:
+    plugin_display_name: "{{ plugin_meta.matches[0].module['name'] }}"
+
+- name: Get Plugin Version
+  set_fact:
+    plugin_version: "{{ plugin_meta.matches[0].module['version'] }}"
+
+- name: Get Plugin Build Number
+  set_fact:
+    plugin_build: "{{ plugin_meta.matches[0].module['build-number'] }}"
+
+- name: Get Installed Plugins
   uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}"
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/all"
     user: "{{ vro_root_username }}"
     password: "{{ vro_root_password }}"
     validate_certs: "{{ http_validate_certs }}"
     force_basic_auth: yes
-    method: POST
+    method: GET
     headers:
       Accept: "{{ http_Accept }}"
-    body_format: "{{ http_body_format }}"
-    body:
-      eulaAccepted: true
-      forceInstall: "{{ vro_force_plugin_install }}"
-    status_code: [200]
-  register: vro_plugin_install_response
+    http_agent: "{{ http_agent }}"
+    status_code: [200, 404]
+  register: vro_installed_plugins
   delegate_to: localhost
-  delegate_facts: true
 
-- name: "Complete vRO Plugin Installation"
-  uri:
-    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}/finish"
-    user: "{{ vro_root_username }}"
-    password: "{{ vro_root_password }}"
-    validate_certs: "{{ http_validate_certs }}"
-    force_basic_auth: yes
-    method: POST
-    headers:
-      Accept: "{{ http_Accept }}"
-    status_code: [200]
-  register: vro_plugin_finish_response
-  delegate_to: localhost
-  delegate_facts: true
-  changed_when: |
-    vro_plugin_finish_response.json.installPluginStates[0].state == "INSTALLED" or
-    vro_plugin_finish_response.json.installPluginStates[0].state == "OVERWRITTEN"
+- name: Get Installed Plugin Version (if exists)
+  set_fact:
+    plugin_installed_version: "{{ vro_installed_plugins | json_query(query) }}"
+  vars:
+    query: "json[?name=='{{ plugin_display_name }}'].version"
+
+- name: Get Installed Plugin Build Number (if exists)
+  set_fact:
+    plugin_installed_build: "{{ vro_installed_plugins | json_query(query) }}"
+  vars:
+    query: "json[?name=='{{ plugin_display_name }}'].buildNumber"
+
+- name: "Install Plugin: {{ vro_plugin_file }}"
+  block:
+    - name: "Upload vRO Plugin: {{ vro_plugin_file }}"
+      command: >
+        curl -k -XPOST -u "{{ vro_root_username }}":"{{ vro_root_password }}"
+        -F "file=@{{ role_path }}/files/plugins/{{ vro_plugin_file }}"
+        -A "{{ http_agent }}"
+        https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation
+      args:
+        warn: false
+      delegate_to: localhost
+      register: vro_plugin_upload_response
+      no_log: true
+
+    - name: Set Plugin ID
+      set_fact:
+        vro_plugin_id: "{{ (vro_plugin_upload_response.stdout | from_json).id }}"
+
+    - name: "Install vRO Plugin: {{ vro_plugin_file }}"
+      uri:
+        url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}"
+        user: "{{ vro_root_username }}"
+        password: "{{ vro_root_password }}"
+        validate_certs: "{{ http_validate_certs }}"
+        force_basic_auth: yes
+        method: POST
+        headers:
+          Accept: "{{ http_Accept }}"
+        http_agent: "{{ http_agent }}"
+        body_format: "{{ http_body_format }}"
+        body:
+          eulaAccepted: true
+          forceInstall: "{{ vro_force_plugin_install }}"
+        status_code: [200]
+      register: vro_plugin_install_response
+      delegate_to: localhost
+
+    - name: "Complete vRO Plugin Installation"
+      uri:
+        url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/plugins/installation/{{ vro_plugin_id }}/finish"
+        user: "{{ vro_root_username }}"
+        password: "{{ vro_root_password }}"
+        validate_certs: "{{ http_validate_certs }}"
+        force_basic_auth: yes
+        method: POST
+        headers:
+          Accept: "{{ http_Accept }}"
+        http_agent: "{{ http_agent }}"
+        status_code: [200]
+      register: vro_plugin_finish_response
+      delegate_to: localhost
+      changed_when: |
+        vro_plugin_finish_response.json.installPluginStates[0].state == "INSTALLED" or
+        vro_plugin_finish_response.json.installPluginStates[0].state == "OVERWRITTEN"
+
+    - name: Set vRO Service Restart Flag
+      set_fact:
+        vro_service_restart_required: true
+      #when: vro_plugin_finish_response.changed|bool
+  when: |
+    plugin_installed_version|length < 1 or
+    plugin_installed_version[0] < plugin_version or
+    ((plugin_installed_version[0] == plugin_version) and (plugin_installed_build[0] < plugin_build))
