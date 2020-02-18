@@ -1,0 +1,47 @@
+---
+- name: Start Import Trusted Certificate Process
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/trust/process"
+    user: "{{ vro_root_username }}"
+    password: "{{ vro_root_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    body_format: "{{ http_body_format }}"
+    body:
+      url: "{{ trusted_cert_url }}"
+      proxyPort: "{{ trust_proxy_port | default(0) }}"
+      proxyUrl: "{{ trust_proxy_url | default('') }}"
+      useProxy: "{{ trust_use_proxy | default(false) }}"
+    status_code: [201]
+  register: vro_trusted_cert_import_start
+  delegate_to: localhost
+  changed_when: false
+  ## Need to re-think the failure condition
+  # failed_when: |
+  #   vro_trusted_cert_import_start.json.error is defined and
+  #   vro_trusted_cert_import_start.json.error != ""
+
+- name: Set Trusted Certificate ID
+  set_fact:
+    trust_cert_id: "{{ vro_trusted_cert_import_start.json.id }}"
+
+- name: Complete Import Trusted Certificate Process
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/trust/process/{{ trust_cert_id }}/finish"
+    user: "{{ vro_root_username }}"
+    password: "{{ vro_root_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: vro_trusted_cert_import_end
+  delegate_to: localhost
+  changed_when: vro_trusted_cert_import_end.status == 200
+  when: vro_trusted_cert_import_start.status == 201
