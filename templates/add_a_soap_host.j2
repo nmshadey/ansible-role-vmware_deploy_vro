@@ -30,13 +30,13 @@
       "scope": "local",
       "name": "connectionTimeout",
       "type": "number",
-      "value": {"number": {"value": "30" }}
+      "value": {"number": {"value": "{{ soap_plugin.connection_timeout | default(vro_soap_host_connection_timeout) }}" }}
     },
     {
       "scope": "local",
       "name": "requestTimeout",
       "type": "number",
-      "value": {"number": {"value": "60" }}
+      "value": {"number": {"value": "{{ soap_plugin.request_timeout | default(vro_soap_host_request_timeout) }}" }}
     }
   ]
 }
