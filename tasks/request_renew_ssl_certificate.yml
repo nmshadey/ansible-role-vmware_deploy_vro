@@ -1,0 +1,59 @@
+---
+## Installs the certificate to the vRO appliance. Certificates are only installed if the
+## certificate_update_status variable is set to '1'.
+- name: Install new SSL Certificate
+  block:
+  - name: Create vRO certificate chain with intermediate and root CA locally
+    shell: |
+      echo '{{ certificate_server_content|trim }}' > '/tmp/{{ inventory_hostname | lower }}-certificatechain.pem'
+      echo '{{ certificate_intermediate_content|trim }}' >> '/tmp/{{ inventory_hostname | lower }}-certificatechain.pem'
+      echo '{{ certificate_root_content|trim }}' >> '/tmp/{{ inventory_hostname | lower }}-certificatechain.pem'
+      echo '{{ certificate_private_key_content|trim }}' >> '/tmp/{{ inventory_hostname | lower }}-certificatechain.pem'
+    delegate_to: localhost
+
+  - name: Curl command to vRO for importing the certificate
+    command: >
+      curl -k -XPOST -u "{{ vro_root_username }}":"{{ vro_root_password }}" 
+      -F "file=@/tmp/{{ inventory_hostname | lower }}-certificatechain.pem"
+      -A "{{ http_agent }}"
+      "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/import/pem"
+    args:
+      warn: false
+    delegate_to: localhost
+    register: vro_ssl_import_response
+    failed_when: '"Exception occurred" in vro_ssl_import_response.stdout'
+
+  - name: "SSL Certificate installation validation"
+    fail:
+      msg: "{{ vro_ssl_import_response.stdout }}"
+    when: |
+      (vro_ssl_import_response.stdout | from_json).error is defined and
+      not ((vro_ssl_import_response.stdout | from_json).error is none)
+
+  - name: Set Certificate ID
+    set_fact:
+      vro_certificate_id: "{{ (vro_ssl_import_response.stdout | from_json).id }}" # noqa 503
+    when: vro_ssl_import_response.changed|bool
+
+  - name: Complete SSL Certificate Import
+    uri:
+      url: "https://{{ inventory_hostname|lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/ssl/import/pem/{{ vro_certificate_id }}/finish" # noqa 503
+      user: "{{ vro_root_username }}"
+      password: "{{ vro_root_password }}"
+      validate_certs: "{{ http_validate_certs }}"
+      force_basic_auth: yes
+      method: POST
+      headers:
+        Accept: "{{ http_Accept }}"
+      http_agent: "{{ http_agent }}"
+      status_code: [200]
+    register: vro_ssl_import_finish_response
+    delegate_to: localhost
+    delegate_facts: true
+    when: vro_ssl_import_response.changed|bool
+    changed_when: vro_ssl_import_finish_response.status == 200
+
+  - name: Set vRO Service Restart Flag
+    set_fact:
+      vro_service_restart_required: true
+  when: certificate_update_status == 1
