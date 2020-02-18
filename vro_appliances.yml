@@ -1,0 +1,279 @@
+---
+## Define the additional hard disks that should be present on the vRO appliance.
+ova_hardware_disks:
+  - size_gb: 20
+    scsi_controller: 0
+    unit_number: 2
+    device: /dev/sdc
+    mount_point: /var
+    passno: 2
+    migrate_data: yes
+  - size_gb: 60
+    scsi_controller: 0
+    unit_number: 3
+    device: /dev/sdd
+    mount_point: /jpmcstore
+    migrate_data: no
+
+## Set the global default credentials to set on the vRO appliances.
+vro_root_username: "root"
+ansible_user: "{{ vro_root_username }}"
+
+## Set the global default SSO credentials (used for seting up the authentication to vCenter)
+vcsa_sso_username: "administrator@vsphere.local"
+
+vro_api_port: 8281
+
+## vRO Auth Groups
+# "temp" group/user is used during the vRO setup only
+vro_temp_adminGroup: "GNAEASTGTIVCOVAPP"
+vro_temp_api_username: "W511619@naeast.ad.jpmorganchase.com" # (is member of vro_temp_adminGroup)
+# "prod" group/user is used at the end of the automation to lockdown the server if needed
+vro_prod_adminGroup: "GNAEASTGTIVCOVAPP"
+
+## Set the source of where to obtain vRO Plugins.
+## Available source are: 'local' and 'http'.
+## If using 'http', ensure that 'ova_url' is also set.
+vro_plugin_source: http
+
+## Set the download location for images retrieved using a http source.
+## DO NOT add a leading '/'.
+ova_url: "{{ ova_root_url }}/kickstart/iaas/vsirepo/vro/ova"
+
+## Set Java Heap Memory
+vro_java_heap_mem: 4096
+
+## Default vCenter Plugin timeout.
+vro_vcenter_plugin_timeout: 600000
+
+## Install Packages
+vro_install_packages: yes
+vro_packages:
+  - vro.vms.2.28.0-beta1.package
+  - vro.vsi.1.9.0-alpha2.package
+  - vro.vsilifecycle.2.0.39.package
+# It must be a dot between the package type (vro.vms) and the version (2.27.1 or 2.30.0-beta1)
+# For example:  vro.vsi.1.8.1.package  or  vro.vms.2.29.0-rc4.package
+
+vro_scheduled_tasks:
+  - name: "vCO_ScheduledTasksManager"
+    description: "This scheduled workflow can disable or enable all the other scheduled tasks. For example during a change Freeze"
+    recurrence-pattern: "00:00,05:00,10:00,15:00,20:00,25:00,30:00,35:00,40:00,45:00,50:00,55:00"
+    recurrence-cycle: "every-hours"
+
+vro_permissions:
+  - principal: "GNAEAST-VSI-SIT"
+    rights: "rxica"
+    description: "Engineering access"
+  - principal: "GEMEA-VSI-SIT"
+    rights: "rxica"
+    description: "Engineering access"
+  - principal: "GASIAPAC-VSI-SIT"
+    rights: "rxica"
+    description: "Engineering access"
+
+## Set the default http agent for API calls.
+# the vRO7.5 API seems to reject other user agents with "invalid request" error for some reasons ....
+http_agent: "curl/7.61.0-DEV"
+
+## List of service that should be started and enabled on the vRO appliance.
+vro_start_services:
+  - ntp
+
+## List of service that should be stopped and disabled on the vRO appliance.
+vro_stop_services:
+  - ldap
+
+## Add HTTP Restful API Endpoints.
+## Supported Authentication types are: Basic and OAuth2.
+## Uncomment and set proxy section if rest host is behind a proxy.
+rest_plugin_endpoints:
+  - name: BMS20
+    url: https://icp-bms-amer-sit.jpmchase.net:8001/bms/api/2.0
+    nodes:
+     - https://iaasn00010995.svr.us.jpmchase.net:8001
+     - https://iaasn00010736.svr.us.jpmchase.net:8001
+    # oauth2_token: "{{ rest_plugin_endpoint_token }}"
+    # proxy_host: proxy.example.com
+    # proxy_port: 8080
+    ## Proxy username and password can be left commented if proxy doesn't require authentication
+    # proxy_username: "{{ rest_plugin_endpoint_proxy_username }}"
+    # proxy_password: "{{ rest_plugin_endpoint_proxy_password }}"
+    host_verification: no
+  - name: NetID
+    url: https://netid.jpmchase.net/netid/v1.1
+  - name: Janus
+    url: https://janus-sso-uat.jpmorgan.com/sso/action/login
+  - name: SiteMinder
+    url: https://smlogin-qa.jpmchase.net/siteminderagent/SSOlogin.fcc
+  - name: EMP
+    url: https://emp.test.gaiacloud.jpmchase.net/api/
+  - name: VERUM
+    url: https://verum.jpmchase.net/Verum/5.0
+  - name: MDM
+    url: https://automation.jpmchase.net/iBroker-MDM-REST/v3
+  - name: BitBucket
+    url: https://bitbucketdc-cluster04.jpmchase.net/projects/CARINA/repos/vsidata-dit/browse/
+    auth_type: Basic
+    username: "{{ bitbucket_username }}"
+    password: "{{ bitbucket_password }}"
+
+## Add SOAP API Endpoints.
+## Supported Authentication types are: Basic, Digest and Kerberos.
+## Uncomment and set proxy section if SOAP host is behind a proxy.
+soap_plugin_endpoints:
+  - name: eHub
+    wsdl_uri: https://ehub-uat.jpmchase.net/ehub/eHub.asmx?WSDL
+    # auth_type: None
+    # username: "{{ soap_plugin_endpoint_username }}"
+    # password: "{{ soap_plugin_endpoint_password }}"
+    # kerberos_spn: someuser@example.local
+    # proxy_host: proxy.example.com
+    # proxy_port: 8080
+
+loginsight_servers:
+  - server: vsi-loginsight-01.lab.jpmchase.net
+    protocol: syslog
+    port: 514
+    useSSL: false
+
+## Configuration Elements
+vro_config_elements:
+  - name: PATTERN_DB
+    id: "5b7b0b0b-7206-4096-ae8c-f37891de5f33"
+    folder: "IaaS"
+    attributes:
+      - name: DB_USERNAME
+        type: string
+        description: "SQL Server User Name"
+        value: "{{ pattern_db_username | default('') }}"
+      - name: DB_PASSWORD
+        type: SecureString
+        description: "SQL Server Password"
+        value: "{{ pattern_db_password | default('') }}"
+      - name: DB_SERVER_NAME
+        type: string
+        description: "SQL Server Name or IP"
+        value: "{{ pattern_db_host | default('') }}"
+      - name: DB_INSTANCE_NAME
+        type: string
+        description: "SQL Server Instance Name (optional)"
+        value: "{{ pattern_db_instance | default('') }}"
+      - name: DB_DATABASE_NAME
+        type: string
+        description: "SQL Server Database Name"
+        value: "{{ pattern_db_database | default('') }}"
+      - name: DB_PORT_NUMBER
+        type: string
+        description: "SQL Server Port Number (optional)"
+        value: "{{ pattern_db_port | default('') }}"
+      - name: useDB
+        type: string
+        description: "Property to switch the ICP data source. Expected values: 'BMS', 'Consul' or 'PatternDB'"
+        value: "{{ icp_data_source | default('') }}"
+      - name: BMSname
+        type: string
+        description: "Name of the BMS REST Endpoint"
+        value: "{{ bms_endpoint_name | default('') }}"
+      - name: MDMORA
+        type: string
+        description: "MDM Oracle connection string"
+        value: "{{ mdm_connection | default('') }}"
+      - name: MDMORA_User
+        type: string
+        description: "MDM Oracle User Name"
+        value: "{{ mdm_username | default('') }}"
+      - name: MDMORA_Pass
+        type: SecureString
+        description: "MDM Oracle Password"
+        value: "{{ mdm_password | default('') }}"
+      - name: BitBucket_User
+        type: string
+        description: "BitBucket User"
+        value: "{{ bitbucket_username | default('') }}"
+      - name: Bitbucket_Pass
+        type: SecureString
+        description: "BitBucket Pass"
+        value: "{{ bitbucket_password | default('') }}"
+      - name: BitbucketesxUpgradeFunctions_Path
+        type: string
+        description: "BitBucket Path that hold the configuration"
+        value: "{{ bitbucket_esxUpgradeFunctions_path | default('') }}"
+      - name: Proxy_URL
+        type: string
+        description: "Proxy URL"
+        value: "{{ proxy_host | default('') }}"
+      - name: Proxy_Port
+        type: string
+        description: "Proxy Port"
+        value: "{{ proxy_port | default('') }}"
+  - name: CUSTOM_FIELDS
+    id: "2b40d5cd-7dfb-46a2-b4fb-23884f6050c9"
+    folder: "IaaS"
+    attributes:
+      - name: VCO_SERVER
+        type: string
+        description: "vCO server's full computer name"
+        value: "{{ inventory_hostname | lower }}"
+      - name: VCO_ENV
+        type: string
+        description: "vCO server's environment (DEV, UAT or PROD)"
+        value: "{{ active_environment }}"
+      - name: VCO_IMAGE
+        type: string
+        description: "vCO OVA file name used during the deployment"
+        value: "{{ ova_file }}"
+      - name: VCO_AnsibleRoleVersion
+        type: string
+        description: "Version of the ansible role used during the deployment"
+        value: "{{ appliance_deployment_version }}"
+      - name: VCO_DeployedByVCuser
+        type: string
+        description: "Name of the vCenter user that deployed the server"
+        value: "{{ ova_deployment_username }}"
+      - name: VCO_DeployedTime
+        type: string
+        description: "Time of the server deployment"
+        value: "{{ lookup('pipe','date +%Y-%m-%d-%H:%M:%S') }}"
+      - name: VCO_smtpServer
+        type: string
+        description: "Server used to send SMTP messages"
+        value: "{{ smtp_server }}"
+      - name: VCO_UTcOffSet
+        type: number
+        description: "Define vRO timezone used for scheduling workflows"
+        value: "{{ UTC_OffSet }}"
+  - name: CONFIG
+    id: "78d61645-528f-4378-977b-b50705981c01"
+    folder: "IaaS"
+    attributes:
+      - name: datasource
+        type: string
+        description: "Configuration Source to use"
+        value: "BitBucket"
+      - name: datasourcenames
+        type: Array/string
+        description: "BitBucket REST Connection Names"
+        value: "{% raw -%}#{#string#BitBucket#}#{% endraw -%}"
+      - name: options
+        type: string
+        description: "Processing options"
+        value: "?raw"
+
+powershell_config_elements:
+  - name: POWERCLI
+    id: "f7c0e5f2-9215-4a43-801b-11461b069552"
+    folder: "IaaS"
+    attributes:
+      - name: POWERCLI_HOST
+        type: "PowerShell:PowerShellHost"
+        description: "powershell host in inventory"
+        value: "{{ vro_ps_host | default('') }}"
+      - name: VC_USERNAME
+        type: string
+        description: "user name of vCO service account in VC"
+        value: "{{ vro_vc_username }}"
+      - name: VC_PASSWORD
+        type: SecureString
+        description: "password of vCO service account in VC"
+        value: "{{ vro_vc_password }}"
