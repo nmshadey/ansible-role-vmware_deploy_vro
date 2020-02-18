@@ -1,0 +1,4 @@
+---
+- include_tasks: reboot_guest.yml
+
+- include_tasks: wait_for_vro_service.yml
