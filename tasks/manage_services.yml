@@ -1,0 +1,16 @@
+---
+- name: "Stop Service: {{ item }}"
+  service:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop: "{{ vro_stop_services }}"
+  when: vro_stop_services is defined
+
+- name: "Start Service: {{ item }}"
+  service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ vro_start_services }}"
+  when: vro_start_services is defined
