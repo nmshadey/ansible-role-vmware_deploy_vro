@@ -33,25 +33,25 @@
       "scope": "local",
       "name": "hostVerification",
       "type": "boolean",
-      "value": {"boolean": {"value": "{{ rest_plugin.host_verification }}" }}
+      "value": {"boolean": {"value": "{{ rest_plugin.host_verification | default(vro_rest_host_verification) }}" }}
     },
     {
       "scope": "local",
       "name": "ignoreWarnings",
       "type": "boolean",
-      "value": {"boolean": {"value": "true" }}
+      "value": {"boolean": {"value": "{{ rest_plugin.ignore_warnings | default(vro_rest_host_ignore_warnings) }}" }}
     },
     {
       "scope": "local",
       "name": "connectionTimeout",
       "type": "number",
-      "value": {"number": {"value": "30" }}
+      "value": {"number": {"value": "{{ rest_plugin.connection_timeout | default(vro_rest_host_connection_timeout) }}" }}
     },
     {
       "scope": "local",
       "name": "operationTimeout",
       "type": "number",
-      "value": {"number": {"value": "60" }}
+      "value": {"number": {"value": "{{ rest_plugin.operation_timeout | default(vro_rest_host_operation_timeout) }}" }}
     }
   ]
 }
