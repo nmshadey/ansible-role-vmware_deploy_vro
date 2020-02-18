@@ -1,0 +1,12 @@
+---
+- name: Reboot the Appliance
+  vmware_guest:
+    hostname: "{{ ova_deployment_hostname }}"
+    username: "{{ ova_deployment_username }}"
+    password: "{{ ova_deployment_password }}"
+    validate_certs: "{{ ova_validate_certs }}"
+    name: "{{ inventory_hostname_short | lower }}"
+    wait_for_ip_address: "{{ ova_wait_for_ip_address }}"
+    state: rebootguest
+  register: reboot_guest
+  delegate_to: localhost
