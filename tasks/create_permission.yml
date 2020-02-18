@@ -1,0 +1,23 @@
+---
+- name: Creating Permissions
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/server/permissions"
+    user: "{{ vro_temp_api_username }}"
+    password: "{{ vro_temp_api_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    body_format: "{{ http_body_format }}"
+    body:
+      permissions:
+        - permission:
+            principal: "{{ permission.principal }}"
+            rights: "{{ permission.rights }}"
+    status_code: [200, 201]
+    timeout: 240
+  register: permission_response
+  changed_when: permission_response.status == 201
+  delegate_to: localhost
