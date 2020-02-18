@@ -1,0 +1,53 @@
+---
+- name: Get Configuration Categories
+  uri:
+    url: "https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/categories?categoryType=ConfigurationElementCategory"
+    user: "{{ vro_temp_api_username }}"
+    password: "{{ vro_temp_api_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: vro_config_categories
+  delegate_to: localhost
+  run_once: yes
+
+- name: "Set Configuration Category ID for folder: {{ config_element.folder }}"
+  set_fact:
+    category_id: "{{ (vro_config_categories.json | json_query(query) | first).split('/')[-2] }}"
+  vars:
+    query: "link[?attributes[?value == '{{ config_element.folder }}']].href"
+
+- include_tasks: get_powershell_host_id.yml
+  when: |
+    config_element.name == 'POWERCLI' and
+    (powershell_plugin_endpoints is defined and vro_ps_host is defined)
+
+- name: Create temp config element XML file
+  template:
+    src: config_element_file.j2
+    dest: /tmp/config_element.xml
+  delegate_to: localhost
+
+- name: Create config element and always remove temp XML file
+  block:
+    - name: "Creating Configuration Element: {{ config_element.name }}"
+      command: >
+        curl -k -XPOST -u "{{ vro_temp_api_username }}":"{{ vro_temp_api_password }}"
+        -F "file=@/tmp/config_element.xml"
+        -A "{{ http_agent }}"
+        https://{{ inventory_hostname|lower }}:{{ vro_api_port }}/vco/api/configurations?categoryId='{{ category_id }}'
+      args:
+        warn: false
+      delegate_to: localhost
+      register: vro_config_element
+      no_log: true
+  always:
+    - name: Remove temp config element XML file
+      file:
+        path: /tmp/config_element.xml
+        state: absent
+      delegate_to: localhost
