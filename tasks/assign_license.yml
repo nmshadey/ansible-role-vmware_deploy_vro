@@ -1,0 +1,35 @@
+---
+- name: Get Current License
+  uri:
+    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/license"
+    user: "{{ vro_root_username }}"
+    password: "{{ vro_root_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    status_code: [200]
+  register: get_license_response
+  delegate_to: localhost
+
+- name: Set License
+  uri:
+    url: "https://{{ inventory_hostname | lower }}:{{ vro_cc_api_port }}/vco-controlcenter/api/license/configure/manual/?lic"
+    user: "{{ vro_root_username }}"
+    password: "{{ vro_root_password }}"
+    validate_certs: "{{ http_validate_certs }}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      Accept: "{{ http_Accept }}"
+    http_agent: "{{ http_agent }}"
+    body_format: "{{ http_body_format }}"
+    body:
+      serialNumber: "{{ VRO_LicenseKey }}"
+    status_code: [200]
+  register: set_license_response
+  delegate_to: localhost
+  changed_when: set_license_response.status == 200
+  when: VRO_LicenseKey != get_license_response.json.license.licenseElement.licenseString
