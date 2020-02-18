@@ -1,0 +1,43 @@
+---
+- name: Check if patch rpm file exists on vro host
+  stat:
+    path: "/tmp/{{ vro_patch_file }}"
+    get_checksum: no
+  register: stat_vro_patch_file
+
+- name: Download patch rpm file and upload to vRO
+  block:
+  - name: Check if patch rpm file is cached
+    stat:
+      path: "{{ ova_local_cache }}/{{ vro_patch_file }}"
+      get_checksum: no
+    register: stat_vro_patch_file_cached
+    delegate_to: localhost
+
+  - name: Download patch rpm file
+    get_url:
+      url: "{{ ova_url }}/{{ vro_patch_file }}"
+      dest: "{{ ova_local_cache }}"
+    register: patch_download
+    delegate_to: localhost
+    when: not (stat_vro_patch_file_cached.stat.exists|bool)
+
+  - name: "Copy {{ vro_patch_file }} file to server"
+    copy:
+      src: "{{ ova_local_cache }}/{{ vro_patch_file }}"
+      dest: "/tmp/{{ vro_patch_file }}"
+  when: not (stat_vro_patch_file.stat.exists|bool)
+
+- name: Check if RPM is already installed
+  shell: "rpm -q {{ vro_patch_file[:-4] }}"
+  args:
+    warn: false
+  register: rpm_check
+  changed_when: false
+  ignore_errors: yes
+
+- name: "Install package {{ vro_patch_file }}"
+  shell: rpm -Uvh /tmp/{{ vro_patch_file }}
+  args:
+    warn: false
+  when: '"is not installed" in rpm_check.stdout'
