@@ -1,0 +1,10 @@
+---
+- name: Get Powershell Host ID
+  include_tasks: get_catalog_object_id.yml
+  vars:
+    catalog_host: "{{ vro_ps_host }}"
+    catalog_namespace: "PowerShell"
+
+- name: Set PowerShell Host ID
+  set_fact:
+    ps_host_id: "{{ cat_object_id }}"
